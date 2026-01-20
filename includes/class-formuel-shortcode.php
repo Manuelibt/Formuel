@@ -22,11 +22,21 @@ final class Formuel_Shortcode
         wp_enqueue_script('formuel-script');
 
         $values = self::default_values();
+        $errors = [];
         $message = '';
         $timestamp = (int) current_time('timestamp');
 
         if (!empty($_GET['formuel_status'])) {
             $message = sanitize_text_field(wp_unslash($_GET['formuel_status']));
+        }
+
+        if ($message === 'error') {
+            $cached = self::get_cached_submission();
+            if (!empty($cached)) {
+                $values = $cached['values'] ?? $values;
+                $errors = $cached['errors'] ?? [];
+                self::clear_cached_submission();
+            }
         }
 
         ob_start();
@@ -60,7 +70,22 @@ final class Formuel_Shortcode
         $values['email'] = sanitize_email(wp_unslash($_POST['formuel_email'] ?? ''));
         $values['message'] = sanitize_textarea_field(wp_unslash($_POST['formuel_message'] ?? ''));
 
-        if (empty($values['name']) || empty($values['email']) || empty($values['message'])) {
+        $errors = [];
+
+        if (empty($values['name'])) {
+            $errors['name'] = esc_html__('Please enter your name.', 'formuel');
+        }
+
+        if (empty($values['email'])) {
+            $errors['email'] = esc_html__('Please enter your email address.', 'formuel');
+        }
+
+        if (empty($values['message'])) {
+            $errors['message'] = esc_html__('Please enter a message.', 'formuel');
+        }
+
+        if (!empty($errors)) {
+            self::cache_submission($values, $errors);
             self::redirect_with_status('error');
         }
 
@@ -76,6 +101,7 @@ final class Formuel_Shortcode
             ['%s', '%s', '%s', '%s']
         );
 
+        self::clear_cached_submission();
         self::redirect_with_status('success');
     }
 
@@ -93,5 +119,42 @@ final class Formuel_Shortcode
         $redirect = add_query_arg('formuel_status', $status, wp_get_referer() ?: home_url('/'));
         wp_safe_redirect($redirect);
         exit;
+    }
+
+    private static function cache_submission(array $values, array $errors): void
+    {
+        set_transient(self::cached_submission_key(), [
+            'values' => $values,
+            'errors' => $errors,
+        ], MINUTE_IN_SECONDS * 15);
+    }
+
+    private static function get_cached_submission(): array
+    {
+        $cached = get_transient(self::cached_submission_key());
+        if (!is_array($cached)) {
+            return [];
+        }
+
+        return $cached;
+    }
+
+    private static function clear_cached_submission(): void
+    {
+        delete_transient(self::cached_submission_key());
+    }
+
+    private static function cached_submission_key(): string
+    {
+        $user_id = get_current_user_id();
+        if ($user_id > 0) {
+            return 'formuel_submission_' . $user_id;
+        }
+
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
+        $agent = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : 'unknown';
+        $hash = md5($ip . '|' . $agent);
+
+        return 'formuel_submission_' . $hash;
     }
 }
