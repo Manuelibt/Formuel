@@ -18,12 +18,32 @@
 }
 
 .formuel-field input,
-.formuel-field textarea {
+.formuel-field textarea,
+.formuel-field select {
     width: 100%;
     border: 1px solid #c3c4c7;
     border-radius: 4px;
     padding: 10px 12px;
     font-size: 16px;
+}
+
+.formuel-checkbox-group {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.formuel-checkbox-group legend {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.formuel-checkbox-group label {
+    font-weight: 400;
+}
+
+.formuel-field--hidden {
+    display: none;
 }
 
 .formuel-button {
