@@ -1,55 +1,44 @@
+# Formuel translation template.
+# Copyright (C) 2026 Formuel
+# This file is distributed under the same license as the Formuel package.
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: Formuel 0.2.0\n"
-"POT-Creation-Date: 2025-02-14 00:00+0000\n"
+"Project-Id-Version: Formuel\n"
+"Report-Msgid-Bugs-To: https://example.com/support\n"
+"POT-Creation-Date: 2026-01-20 08:38+0000\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Formuel"
+#: includes/class-formuel-shortcode.php:43
+msgid "Security check failed."
 msgstr ""
 
-msgid "Formuel Entries"
+#: templates/form.php:8
+msgid "Thanks! Your message was saved."
 msgstr ""
 
-msgid "Entries"
+#: templates/form.php:12
+msgid "Please fill in all fields."
 msgstr ""
 
-msgid "Settings"
+#: templates/form.php:18
+msgid "Name"
 msgstr ""
 
-msgid "Export CSV"
+#: templates/form.php:23
+msgid "Email"
 msgstr ""
 
-msgid "Base price per day"
+#: templates/form.php:28
+msgid "Message"
 msgstr ""
 
-msgid "Voucher codes"
-msgstr ""
-
-msgid "Email notifications"
-msgstr ""
-
-msgid "Send notification email on new registration"
-msgstr ""
-
-msgid "Notification recipient"
-msgstr ""
-
-msgid "Notification subject"
-msgstr ""
-
-msgid "Participant name"
-msgstr ""
-
-msgid "Guardian name"
-msgstr ""
-
-msgid "Number of days"
-msgstr ""
-
-msgid "Voucher code (optional)"
-msgstr ""
-
-msgid "Submit registration"
+#: templates/form.php:34
+msgid "Send"
 msgstr ""

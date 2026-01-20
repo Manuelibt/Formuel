@@ -1,11 +1,10 @@
 # Formuel
 
-Formuel is a lightweight WordPress form plugin that stores school registration submissions in the site database and outputs a clean, theme-friendly layout.
+Formuel is a lightweight WordPress form plugin that stores submissions in the site database and outputs a clean, theme-friendly layout.
 
 ## Features
-- Shortcode `[formuel]` renders a responsive registration form.
-- Submissions stored in a dedicated database table with pricing and voucher data.
-- CSV export and admin list view for received registrations.
+- Shortcode `[formuel]` renders a responsive contact form.
+- Submissions stored in a dedicated database table.
 - Minimal styling that adapts to most themes.
 
 ## Installation
@@ -14,11 +13,16 @@ Formuel is a lightweight WordPress form plugin that stores school registration s
 3. Add `[formuel]` to any page or post.
 
 ## Database
-On activation the plugin creates a table named `{prefix}formuel_entries` with participant, guardian, contact data, program, days, voucher code, total amount, and timestamps.
+On activation the plugin creates a table named `{prefix}formuel_entries` with name, email, message, and timestamp fields.
 
-## Pricing & vouchers
-- Set a base price per day in **Formuel → Settings**.
-- Add voucher codes in the format `CODE,type,amount` (type is `percent` or `fixed`).
+## Localization
+All user-facing strings are wrapped with `__()` or `esc_html__()` using the `formuel` text domain. Generate or refresh the translation template with a gettext tool such as WP-CLI:
+
+```bash
+wp i18n make-pot . languages/formuel.pot
+```
+
+If WP-CLI is not available, you can generate the POT file with `xgettext` by targeting the PHP sources and using the same keywords.
 
 ## Tests
 The project ships with a PHPUnit scaffold compatible with the WordPress test suite.

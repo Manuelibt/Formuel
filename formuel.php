@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Formuel
  * Description: Lightweight form plugin that stores submissions in the WordPress database.
- * Version: 0.2.0
+ * Version: 0.1.0
  * Author: Formuel
  * Text Domain: formuel
  */

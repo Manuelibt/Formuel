@@ -9,7 +9,6 @@ if (!defined('ABSPATH')) {
 final class Formuel_Shortcode
 {
     public const NONCE_ACTION = 'formuel_submit';
-    private const FORM_CACHE_TTL = 300;
 
     public static function register(): void
     {
@@ -25,16 +24,19 @@ final class Formuel_Shortcode
         $values = self::default_values();
         $errors = [];
         $message = '';
-        $base_price = (float) get_option('formuel_base_price', 0);
+        $timestamp = (int) current_time('timestamp');
 
         if (!empty($_GET['formuel_status'])) {
             $message = sanitize_text_field(wp_unslash($_GET['formuel_status']));
         }
 
-        $cached = self::get_cached_submission();
-        if (!empty($cached)) {
-            $values = array_merge($values, $cached['values'] ?? []);
-            $errors = $cached['errors'] ?? [];
+        if ($message === 'error') {
+            $cached = self::get_cached_submission();
+            if (!empty($cached)) {
+                $values = $cached['values'] ?? $values;
+                $errors = $cached['errors'] ?? [];
+                self::clear_cached_submission();
+            }
         }
 
         ob_start();
@@ -52,48 +54,34 @@ final class Formuel_Shortcode
             wp_die(esc_html__('Security check failed.', 'formuel'));
         }
 
-        $values = self::default_values();
-        $errors = [];
-        $values['participant_name'] = sanitize_text_field(wp_unslash($_POST['formuel_participant_name'] ?? ''));
-        $values['guardian_name'] = sanitize_text_field(wp_unslash($_POST['formuel_guardian_name'] ?? ''));
-        $values['email'] = sanitize_email(wp_unslash($_POST['formuel_email'] ?? ''));
-        $values['phone'] = sanitize_text_field(wp_unslash($_POST['formuel_phone'] ?? ''));
-        $values['program'] = sanitize_text_field(wp_unslash($_POST['formuel_program'] ?? ''));
-        $values['days'] = (int) wp_unslash($_POST['formuel_days'] ?? 0);
-        $values['voucher_code'] = strtoupper(sanitize_text_field(wp_unslash($_POST['formuel_voucher_code'] ?? '')));
-        $values['message'] = sanitize_textarea_field(wp_unslash($_POST['formuel_message'] ?? ''));
-        $values['submitted_at'] = (int) wp_unslash($_POST['formuel_timestamp'] ?? 0);
-
-        if (!empty($_POST['formuel_hp'])) {
+        $honeypot = sanitize_text_field(wp_unslash($_POST['formuel_hp'] ?? ''));
+        if ($honeypot !== '') {
             self::redirect_with_status('error');
         }
 
-        if (empty($values['participant_name'])) {
-            $errors['participant_name'] = __('Please enter the participant name.', 'formuel');
+        $submitted_at = absint($_POST['formuel_time'] ?? 0);
+        $now = (int) current_time('timestamp');
+        if ($submitted_at === 0 || ($now - $submitted_at) < 3) {
+            self::redirect_with_status('error');
         }
 
-        if (empty($values['guardian_name'])) {
-            $errors['guardian_name'] = __('Please enter the guardian name.', 'formuel');
+        $values = self::default_values();
+        $values['name'] = sanitize_text_field(wp_unslash($_POST['formuel_name'] ?? ''));
+        $values['email'] = sanitize_email(wp_unslash($_POST['formuel_email'] ?? ''));
+        $values['message'] = sanitize_textarea_field(wp_unslash($_POST['formuel_message'] ?? ''));
+
+        $errors = [];
+
+        if (empty($values['name'])) {
+            $errors['name'] = esc_html__('Please enter your name.', 'formuel');
         }
 
         if (empty($values['email'])) {
-            $errors['email'] = __('Please enter a valid email.', 'formuel');
-        }
-
-        if (empty($values['program'])) {
-            $errors['program'] = __('Please select a program.', 'formuel');
-        }
-
-        if ($values['days'] <= 0) {
-            $errors['days'] = __('Please select the number of days.', 'formuel');
+            $errors['email'] = esc_html__('Please enter your email address.', 'formuel');
         }
 
         if (empty($values['message'])) {
-            $errors['message'] = __('Please add a short note.', 'formuel');
-        }
-
-        if (!empty($values['submitted_at']) && (time() - $values['submitted_at'] < 3)) {
-            $errors['form'] = __('Please wait a moment before submitting.', 'formuel');
+            $errors['message'] = esc_html__('Please enter a message.', 'formuel');
         }
 
         if (!empty($errors)) {
@@ -101,59 +89,28 @@ final class Formuel_Shortcode
             self::redirect_with_status('error');
         }
 
-        $pricing = self::calculate_total($values['days'], $values['voucher_code']);
-
         global $wpdb;
         $wpdb->insert(
             Formuel_DB::table_name(),
             [
-                'participant_name' => $values['participant_name'],
-                'guardian_name' => $values['guardian_name'],
+                'name' => $values['name'],
                 'email' => $values['email'],
-                'phone' => $values['phone'],
-                'program' => $values['program'],
-                'days' => $values['days'],
-                'voucher_code' => $values['voucher_code'],
-                'total_amount' => $pricing['total'],
                 'message' => $values['message'],
                 'created_at' => current_time('mysql'),
             ],
-            ['%s', '%s', '%s', '%s', '%s', '%d', '%s', '%f', '%s', '%s']
+            ['%s', '%s', '%s', '%s']
         );
 
-        if ((bool) get_option('formuel_notify_email', false)) {
-            $recipient = get_option('formuel_notify_recipient', get_option('admin_email'));
-            $subject = get_option('formuel_notify_subject', __('New Formuel registration', 'formuel'));
-            $body = sprintf(
-                "New registration received:\n\nParticipant: %s\nGuardian: %s\nEmail: %s\nPhone: %s\nProgram: %s\nDays: %d\nVoucher: %s\nTotal: %.2f\nMessage: %s\n",
-                $values['participant_name'],
-                $values['guardian_name'],
-                $values['email'],
-                $values['phone'],
-                $values['program'],
-                $values['days'],
-                $values['voucher_code'],
-                $pricing['total'],
-                $values['message']
-            );
-            wp_mail($recipient, $subject, $body);
-        }
-
+        self::clear_cached_submission();
         self::redirect_with_status('success');
     }
 
     private static function default_values(): array
     {
         return [
-            'participant_name' => '',
-            'guardian_name' => '',
+            'name' => '',
             'email' => '',
-            'phone' => '',
-            'program' => '',
-            'days' => 1,
-            'voucher_code' => '',
             'message' => '',
-            'submitted_at' => 0,
         ];
     }
 
@@ -166,77 +123,38 @@ final class Formuel_Shortcode
 
     private static function cache_submission(array $values, array $errors): void
     {
-        set_transient(self::cache_key(), [
+        set_transient(self::cached_submission_key(), [
             'values' => $values,
             'errors' => $errors,
-        ], self::FORM_CACHE_TTL);
+        ], MINUTE_IN_SECONDS * 15);
     }
 
     private static function get_cached_submission(): array
     {
-        $cached = get_transient(self::cache_key());
+        $cached = get_transient(self::cached_submission_key());
         if (!is_array($cached)) {
             return [];
         }
-        delete_transient(self::cache_key());
+
         return $cached;
     }
 
-    private static function cache_key(): string
+    private static function clear_cached_submission(): void
     {
-        $fingerprint = md5((string) ($_SERVER['REMOTE_ADDR'] ?? '') . (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
-        return 'formuel_submission_' . $fingerprint;
+        delete_transient(self::cached_submission_key());
     }
 
-    private static function calculate_total(int $days, string $voucher_code): array
+    private static function cached_submission_key(): string
     {
-        $base_price = (float) get_option('formuel_base_price', 0);
-        $subtotal = $days * $base_price;
-        $voucher = self::find_voucher($voucher_code);
-        $discount = 0.0;
-
-        if (!empty($voucher)) {
-            if ($voucher['type'] === 'percent') {
-                $discount = $subtotal * ($voucher['amount'] / 100);
-            } else {
-                $discount = $voucher['amount'];
-            }
+        $user_id = get_current_user_id();
+        if ($user_id > 0) {
+            return 'formuel_submission_' . $user_id;
         }
 
-        $total = max(0, $subtotal - $discount);
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
+        $agent = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : 'unknown';
+        $hash = md5($ip . '|' . $agent);
 
-        return [
-            'subtotal' => $subtotal,
-            'discount' => $discount,
-            'total' => $total,
-        ];
-    }
-
-    private static function find_voucher(string $voucher_code): array
-    {
-        $raw = (string) get_option('formuel_voucher_codes', '');
-        if ($raw === '' || $voucher_code === '') {
-            return [];
-        }
-
-        $lines = preg_split('/\\r\\n|\\r|\\n/', $raw);
-        foreach ($lines as $line) {
-            $parts = array_map('trim', explode(',', $line));
-            if (count($parts) < 3) {
-                continue;
-            }
-            if (strtoupper($parts[0]) !== $voucher_code) {
-                continue;
-            }
-            $type = $parts[1] === 'fixed' ? 'fixed' : 'percent';
-            $amount = max(0, (float) $parts[2]);
-
-            return [
-                'type' => $type,
-                'amount' => $amount,
-            ];
-        }
-
-        return [];
+        return 'formuel_submission_' . $hash;
     }
 }
