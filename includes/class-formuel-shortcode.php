@@ -24,6 +24,7 @@ final class Formuel_Shortcode
         $values = self::default_values();
         $errors = [];
         $message = '';
+        $timestamp = (int) current_time('timestamp');
 
         if (!empty($_GET['formuel_status'])) {
             $message = sanitize_text_field(wp_unslash($_GET['formuel_status']));
@@ -51,6 +52,17 @@ final class Formuel_Shortcode
 
         if (empty($_POST['formuel_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['formuel_nonce'])), self::NONCE_ACTION)) {
             wp_die(esc_html__('Security check failed.', 'formuel'));
+        }
+
+        $honeypot = sanitize_text_field(wp_unslash($_POST['formuel_hp'] ?? ''));
+        if ($honeypot !== '') {
+            self::redirect_with_status('error');
+        }
+
+        $submitted_at = absint($_POST['formuel_time'] ?? 0);
+        $now = (int) current_time('timestamp');
+        if ($submitted_at === 0 || ($now - $submitted_at) < 3) {
+            self::redirect_with_status('error');
         }
 
         $values = self::default_values();
