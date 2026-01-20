@@ -33,7 +33,12 @@ final class Formuel_DB
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             name varchar(200) NOT NULL,
             email varchar(200) NOT NULL,
+            subject varchar(200) NOT NULL,
+            inquiry_type varchar(50) NOT NULL,
+            newsletter_opt_in tinyint(1) NOT NULL DEFAULT 0,
+            other_details text NOT NULL,
             message text NOT NULL,
+            attachment_url text NOT NULL,
             created_at datetime NOT NULL,
             PRIMARY KEY  (id)
         ) {$charset_collate};";
