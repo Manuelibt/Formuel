@@ -24,6 +24,19 @@ final class Formuel_DB
         return $wpdb->prefix . self::TABLE_SUFFIX;
     }
 
+    public static function table_columns(): array
+    {
+        global $wpdb;
+
+        $table = self::table_name();
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+        if (!is_array($columns)) {
+            return [];
+        }
+
+        return $columns;
+    }
+
     public static function activate(): void
     {
         self::ensure_schema();
