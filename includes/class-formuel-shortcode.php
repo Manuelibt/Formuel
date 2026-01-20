@@ -21,10 +21,21 @@ final class Formuel_Shortcode
         wp_enqueue_script('formuel-script');
 
         $values = self::default_values();
+        $errors = [];
         $message = '';
+        $timestamp = (int) current_time('timestamp');
 
         if (!empty($_GET['formuel_status'])) {
             $message = sanitize_text_field(wp_unslash($_GET['formuel_status']));
+        }
+
+        if ($message === 'error') {
+            $cached = self::get_cached_submission();
+            if (!empty($cached)) {
+                $values = $cached['values'] ?? $values;
+                $errors = $cached['errors'] ?? [];
+                self::clear_cached_submission();
+            }
         }
 
         ob_start();
@@ -42,6 +53,17 @@ final class Formuel_Shortcode
             wp_die(esc_html__('Security check failed.', 'formuel'));
         }
 
+        $honeypot = sanitize_text_field(wp_unslash($_POST['formuel_hp'] ?? ''));
+        if ($honeypot !== '') {
+            self::redirect_with_status('error');
+        }
+
+        $submitted_at = absint($_POST['formuel_time'] ?? 0);
+        $now = (int) current_time('timestamp');
+        if ($submitted_at === 0 || ($now - $submitted_at) < 3) {
+            self::redirect_with_status('error');
+        }
+
         $values = self::default_values();
         $values['name'] = sanitize_text_field(wp_unslash($_POST['formuel_name'] ?? ''));
         $values['email'] = sanitize_email(wp_unslash($_POST['formuel_email'] ?? ''));
@@ -51,16 +73,22 @@ final class Formuel_Shortcode
         $values['newsletter_opt_in'] = !empty($_POST['formuel_newsletter']) ? 'yes' : 'no';
         $values['message'] = sanitize_textarea_field(wp_unslash($_POST['formuel_message'] ?? ''));
 
-        $allowed_types = ['general', 'support', 'other'];
-        if (!in_array($values['inquiry_type'], $allowed_types, true)) {
-            $values['inquiry_type'] = 'general';
+        $errors = [];
+
+        if (empty($values['name'])) {
+            $errors['name'] = esc_html__('Please enter your name.', 'formuel');
         }
 
-        if ($values['inquiry_type'] !== 'other') {
-            $values['other_details'] = '';
+        if (empty($values['email'])) {
+            $errors['email'] = esc_html__('Please enter your email address.', 'formuel');
         }
 
-        if (empty($values['name']) || empty($values['email']) || empty($values['subject']) || empty($values['message'])) {
+        if (empty($values['message'])) {
+            $errors['message'] = esc_html__('Please enter a message.', 'formuel');
+        }
+
+        if (!empty($errors)) {
+            self::cache_submission($values, $errors);
             self::redirect_with_status('error');
         }
 
@@ -97,36 +125,7 @@ final class Formuel_Shortcode
             ['%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s']
         );
 
-        if ($inserted === false) {
-            self::redirect_with_status('error');
-        }
-
-        $recipient = Formuel_Admin::notify_recipient();
-        if ($recipient !== null) {
-            $site_name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-            $subject = sprintf(__('New Formuel submission on %s', 'formuel'), $site_name);
-            $body = sprintf(
-                '<h2>%s</h2><p><strong>%s</strong> %s</p><p><strong>%s</strong> %s</p><p><strong>%s</strong> %s</p><p><strong>%s</strong> %s</p>%s<p><strong>%s</strong> %s</p><p><strong>%s</strong><br>%s</p>%s',
-                esc_html__('New form submission', 'formuel'),
-                esc_html__('Name:', 'formuel'),
-                esc_html($values['name']),
-                esc_html__('Email:', 'formuel'),
-                esc_html($values['email']),
-                esc_html__('Subject:', 'formuel'),
-                esc_html($values['subject']),
-                esc_html__('Inquiry type:', 'formuel'),
-                esc_html($values['inquiry_type']),
-                $values['other_details'] !== '' ? sprintf('<p><strong>%s</strong><br>%s</p>', esc_html__('Other details:', 'formuel'), nl2br(esc_html($values['other_details']))) : '',
-                esc_html__('Newsletter opt-in:', 'formuel'),
-                $values['newsletter_opt_in'] === 'yes' ? esc_html__('Yes', 'formuel') : esc_html__('No', 'formuel'),
-                esc_html__('Message:', 'formuel'),
-                nl2br(esc_html($values['message'])),
-                $attachment_url ? sprintf('<p><strong>%s</strong> <a href="%s">%s</a></p>', esc_html__('Attachment:', 'formuel'), esc_url($attachment_url), esc_html__('View file', 'formuel')) : ''
-            );
-
-            wp_mail($recipient, $subject, $body, ['Content-Type: text/html; charset=UTF-8']);
-        }
-
+        self::clear_cached_submission();
         self::redirect_with_status('success');
     }
 
@@ -148,5 +147,42 @@ final class Formuel_Shortcode
         $redirect = add_query_arg('formuel_status', $status, wp_get_referer() ?: home_url('/'));
         wp_safe_redirect($redirect);
         exit;
+    }
+
+    private static function cache_submission(array $values, array $errors): void
+    {
+        set_transient(self::cached_submission_key(), [
+            'values' => $values,
+            'errors' => $errors,
+        ], MINUTE_IN_SECONDS * 15);
+    }
+
+    private static function get_cached_submission(): array
+    {
+        $cached = get_transient(self::cached_submission_key());
+        if (!is_array($cached)) {
+            return [];
+        }
+
+        return $cached;
+    }
+
+    private static function clear_cached_submission(): void
+    {
+        delete_transient(self::cached_submission_key());
+    }
+
+    private static function cached_submission_key(): string
+    {
+        $user_id = get_current_user_id();
+        if ($user_id > 0) {
+            return 'formuel_submission_' . $user_id;
+        }
+
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
+        $agent = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : 'unknown';
+        $hash = md5($ip . '|' . $agent);
+
+        return 'formuel_submission_' . $hash;
     }
 }
