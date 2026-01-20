@@ -11,36 +11,15 @@ final class Formuel_Admin
     private const OPTION_NOTIFY_EMAIL = 'formuel_notify_email';
     private const SETTINGS_GROUP = 'formuel_settings';
     private const PAGE_SLUG = 'formuel-settings';
-    private const ENTRIES_PAGE_SLUG = 'formuel-entries';
 
     public static function register_menu(): void
     {
-        add_menu_page(
-            __('Formuel Entries', 'formuel'),
+        add_options_page(
+            __('Formuel', 'formuel'),
             __('Formuel', 'formuel'),
             'manage_options',
-            self::ENTRIES_PAGE_SLUG,
-            [self::class, 'render_entries_page'],
-            'dashicons-feedback',
-            30
-        );
-
-        add_submenu_page(
-            self::ENTRIES_PAGE_SLUG,
-            __('Settings', 'formuel'),
-            __('Settings', 'formuel'),
-            'manage_options',
             self::PAGE_SLUG,
-            [self::class, 'render_settings_page']
-        );
-
-        add_submenu_page(
-            self::ENTRIES_PAGE_SLUG,
-            __('Entries', 'formuel'),
-            __('Entries', 'formuel'),
-            'manage_options',
-            self::ENTRIES_PAGE_SLUG,
-            [self::class, 'render_entries_page']
+            [self::class, 'render_page']
         );
     }
 
@@ -72,7 +51,7 @@ final class Formuel_Admin
         );
     }
 
-    public static function render_settings_page(): void
+    public static function render_page(): void
     {
         ?>
         <div class="wrap">
@@ -84,65 +63,6 @@ final class Formuel_Admin
                 submit_button();
                 ?>
             </form>
-        </div>
-        <?php
-    }
-
-    public static function render_entries_page(): void
-    {
-        global $wpdb;
-
-        $entries = $wpdb->get_results(
-            "SELECT * FROM " . Formuel_DB::table_name() . " ORDER BY created_at DESC LIMIT 100",
-            ARRAY_A
-        );
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html__('Formuel Entries', 'formuel'); ?></h1>
-            <table class="widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th><?php echo esc_html__('Date', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Name', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Email', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Subject', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Inquiry type', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Newsletter', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Other details', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Message', 'formuel'); ?></th>
-                        <th><?php echo esc_html__('Attachment', 'formuel'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($entries)) : ?>
-                        <tr>
-                            <td colspan="9"><?php echo esc_html__('No entries found.', 'formuel'); ?></td>
-                        </tr>
-                    <?php else : ?>
-                        <?php foreach ($entries as $entry) : ?>
-                            <tr>
-                                <td><?php echo esc_html($entry['created_at']); ?></td>
-                                <td><?php echo esc_html($entry['name']); ?></td>
-                                <td><?php echo esc_html($entry['email']); ?></td>
-                                <td><?php echo esc_html($entry['subject']); ?></td>
-                                <td><?php echo esc_html($entry['inquiry_type']); ?></td>
-                                <td><?php echo $entry['newsletter_opt_in'] ? esc_html__('Yes', 'formuel') : esc_html__('No', 'formuel'); ?></td>
-                                <td><?php echo nl2br(esc_html($entry['other_details'])); ?></td>
-                                <td><?php echo nl2br(esc_html($entry['message'])); ?></td>
-                                <td>
-                                    <?php if (!empty($entry['attachment_url'])) : ?>
-                                        <a href="<?php echo esc_url($entry['attachment_url']); ?>" target="_blank" rel="noopener noreferrer">
-                                            <?php echo esc_html__('View', 'formuel'); ?>
-                                        </a>
-                                    <?php else : ?>
-                                        <?php echo esc_html__('—', 'formuel'); ?>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
         </div>
         <?php
     }
