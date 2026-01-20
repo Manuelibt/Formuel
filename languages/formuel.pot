@@ -1,0 +1,55 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Formuel 0.2.0\n"
+"POT-Creation-Date: 2025-02-14 00:00+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Formuel"
+msgstr ""
+
+msgid "Formuel Entries"
+msgstr ""
+
+msgid "Entries"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Export CSV"
+msgstr ""
+
+msgid "Base price per day"
+msgstr ""
+
+msgid "Voucher codes"
+msgstr ""
+
+msgid "Email notifications"
+msgstr ""
+
+msgid "Send notification email on new registration"
+msgstr ""
+
+msgid "Notification recipient"
+msgstr ""
+
+msgid "Notification subject"
+msgstr ""
+
+msgid "Participant name"
+msgstr ""
+
+msgid "Guardian name"
+msgstr ""
+
+msgid "Number of days"
+msgstr ""
+
+msgid "Voucher code (optional)"
+msgstr ""
+
+msgid "Submit registration"
+msgstr ""
