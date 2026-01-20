@@ -64,6 +64,24 @@ final class Formuel_Shortcode
             ['%s', '%s', '%s', '%s']
         );
 
+        $recipient = Formuel_Admin::notify_recipient();
+        if ($recipient !== null) {
+            $site_name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+            $subject = sprintf(__('New Formuel submission on %s', 'formuel'), $site_name);
+            $body = sprintf(
+                '<h2>%s</h2><p><strong>%s</strong> %s</p><p><strong>%s</strong> %s</p><p><strong>%s</strong><br>%s</p>',
+                esc_html__('New form submission', 'formuel'),
+                esc_html__('Name:', 'formuel'),
+                esc_html($values['name']),
+                esc_html__('Email:', 'formuel'),
+                esc_html($values['email']),
+                esc_html__('Message:', 'formuel'),
+                nl2br(esc_html($values['message']))
+            );
+
+            wp_mail($recipient, $subject, $body, ['Content-Type: text/html; charset=UTF-8']);
+        }
+
         self::redirect_with_status('success');
     }
 
