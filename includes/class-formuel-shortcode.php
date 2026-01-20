@@ -68,6 +68,10 @@ final class Formuel_Shortcode
         $values = self::default_values();
         $values['name'] = sanitize_text_field(wp_unslash($_POST['formuel_name'] ?? ''));
         $values['email'] = sanitize_email(wp_unslash($_POST['formuel_email'] ?? ''));
+        $values['subject'] = sanitize_text_field(wp_unslash($_POST['formuel_subject'] ?? ''));
+        $values['inquiry_type'] = sanitize_text_field(wp_unslash($_POST['formuel_inquiry_type'] ?? ''));
+        $values['other_details'] = sanitize_textarea_field(wp_unslash($_POST['formuel_other_details'] ?? ''));
+        $values['newsletter_opt_in'] = !empty($_POST['formuel_newsletter']) ? 'yes' : 'no';
         $values['message'] = sanitize_textarea_field(wp_unslash($_POST['formuel_message'] ?? ''));
 
         $errors = [];
@@ -89,16 +93,37 @@ final class Formuel_Shortcode
             self::redirect_with_status('error');
         }
 
+        if ($values['inquiry_type'] === 'other' && empty($values['other_details'])) {
+            self::redirect_with_status('error');
+        }
+
+        $attachment_url = '';
+        if (!empty($_FILES['formuel_attachment']['name'])) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            $upload = wp_handle_upload(
+                $_FILES['formuel_attachment'],
+                ['test_form' => false]
+            );
+            if (isset($upload['url'])) {
+                $attachment_url = $upload['url'];
+            }
+        }
+
         global $wpdb;
         $wpdb->insert(
             Formuel_DB::table_name(),
             [
                 'name' => $values['name'],
                 'email' => $values['email'],
+                'subject' => $values['subject'],
+                'inquiry_type' => $values['inquiry_type'],
+                'newsletter_opt_in' => $values['newsletter_opt_in'] === 'yes' ? 1 : 0,
+                'other_details' => $values['other_details'],
                 'message' => $values['message'],
+                'attachment_url' => $attachment_url,
                 'created_at' => current_time('mysql'),
             ],
-            ['%s', '%s', '%s', '%s']
+            ['%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s']
         );
 
         self::clear_cached_submission();
@@ -110,6 +135,10 @@ final class Formuel_Shortcode
         return [
             'name' => '',
             'email' => '',
+            'subject' => '',
+            'inquiry_type' => 'general',
+            'other_details' => '',
+            'newsletter_opt_in' => 'no',
             'message' => '',
         ];
     }

@@ -18,7 +18,8 @@
 }
 
 .formuel-field input,
-.formuel-field textarea {
+.formuel-field textarea,
+.formuel-field select {
     width: 100%;
     border: 1px solid #c3c4c7;
     border-radius: 4px;
