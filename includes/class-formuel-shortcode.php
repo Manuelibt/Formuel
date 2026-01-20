@@ -110,7 +110,7 @@ final class Formuel_Shortcode
         }
 
         global $wpdb;
-        $wpdb->insert(
+        $inserted = $wpdb->insert(
             Formuel_DB::table_name(),
             [
                 'name' => $values['name'],

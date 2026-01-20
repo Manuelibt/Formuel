@@ -9,6 +9,8 @@ if (!defined('ABSPATH')) {
 final class Formuel_DB
 {
     private const TABLE_SUFFIX = 'formuel_entries';
+    private const DB_VERSION_OPTION = 'formuel_db_version';
+    private const DB_VERSION = 2;
 
     public static function plugin_file(): string
     {
@@ -23,6 +25,19 @@ final class Formuel_DB
     }
 
     public static function activate(): void
+    {
+        self::ensure_schema();
+    }
+
+    public static function maybe_upgrade(): void
+    {
+        $current_version = (int) get_option(self::DB_VERSION_OPTION, 0);
+        if ($current_version < self::DB_VERSION) {
+            self::ensure_schema();
+        }
+    }
+
+    private static function ensure_schema(): void
     {
         global $wpdb;
 
@@ -45,6 +60,8 @@ final class Formuel_DB
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
+
+        update_option(self::DB_VERSION_OPTION, self::DB_VERSION);
     }
 
     public static function deactivate(): void
