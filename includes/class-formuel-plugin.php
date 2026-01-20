@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 require_once __DIR__ . '/class-formuel-db.php';
-require_once __DIR__ . '/class-formuel-admin.php';
+require_once __DIR__ . '/class-formuel-entries-admin.php';
 require_once __DIR__ . '/class-formuel-shortcode.php';
 
 final class Formuel_Plugin
@@ -18,8 +18,7 @@ final class Formuel_Plugin
     {
         add_action('init', [self::class, 'register_assets']);
         add_action('init', [Formuel_Shortcode::class, 'register']);
-        add_action('admin_menu', [Formuel_Admin::class, 'register_menu']);
-        add_action('admin_init', [Formuel_Admin::class, 'register_settings']);
+        add_action('admin_menu', [Formuel_Entries_Admin::class, 'register_menu']);
         register_activation_hook(Formuel_DB::plugin_file(), [Formuel_DB::class, 'activate']);
         register_deactivation_hook(Formuel_DB::plugin_file(), [Formuel_DB::class, 'deactivate']);
     }
