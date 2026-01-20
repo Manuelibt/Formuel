@@ -13,7 +13,6 @@ final class Formuel_Shortcode
     public static function register(): void
     {
         add_shortcode('formuel', [self::class, 'render']);
-        add_action('init', [self::class, 'handle_submission']);
     }
 
     public static function render(): string
