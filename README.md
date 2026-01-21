@@ -15,6 +15,15 @@ Formuel is a lightweight WordPress form plugin that stores submissions in the si
 ## Database
 On activation the plugin creates a table named `{prefix}formuel_entries` with name, email, message, and timestamp fields.
 
+## Localization
+All user-facing strings are wrapped with `__()` or `esc_html__()` using the `formuel` text domain. Generate or refresh the translation template with a gettext tool such as WP-CLI:
+
+```bash
+wp i18n make-pot . languages/formuel.pot
+```
+
+If WP-CLI is not available, you can generate the POT file with `xgettext` by targeting the PHP sources and using the same keywords.
+
 ## Tests
 The project ships with a PHPUnit scaffold compatible with the WordPress test suite.
 
