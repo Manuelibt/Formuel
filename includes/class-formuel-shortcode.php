@@ -45,7 +45,7 @@ final class Formuel_Shortcode
 
     public static function handle_submission(): void
     {
-        if (empty($_POST['formuel_submit'])) {
+        if (empty($_POST['formuel_submit']) && (empty($_POST['action']) || $_POST['action'] !== 'formuel_submit')) {
             return;
         }
 
