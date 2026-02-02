@@ -18,6 +18,7 @@ final class Formuel_Plugin
     {
         add_action('init', [self::class, 'register_assets']);
         add_action('init', [Formuel_Shortcode::class, 'register']);
+        add_action('init', [Formuel_Shortcode::class, 'handle_submission']);
         add_action('admin_menu', [Formuel_Entries_Admin::class, 'register_menu']);
         register_activation_hook(Formuel_DB::plugin_file(), [Formuel_DB::class, 'activate']);
         register_deactivation_hook(Formuel_DB::plugin_file(), [Formuel_DB::class, 'deactivate']);

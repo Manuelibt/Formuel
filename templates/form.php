@@ -1,8 +1,3 @@
-<?php
-/** @var array $values */
-/** @var string $message */
-/** @var array $errors */
-?>
 <div class="formuel-wrapper">
     <?php if ($message === 'success') : ?>
         <div class="formuel-notice formuel-notice--success">
